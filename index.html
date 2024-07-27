@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPT Showcase</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+    <style>
+        .gpt-item {
+            position: relative;
+        }
+        .gpt-item:hover .description-preview {
+            display: block;
+        }
+        .description-preview {
+            display: none;
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px;
+            border-radius: 5px;
+            z-index: 10;
+        }
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #4a5568;
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+        .footer .admin-btn {
+            position: absolute;
+            left: 20px;
+            background-color: transparent;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+        }
+        .footer p {
+            margin: 0;
+        }
+        .delete-btn, .edit-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: red;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            text-align: center;
+            cursor: pointer;
+            display: none;
+        }
+        .edit-btn {
+            right: 35px;
+            background-color: blue;
+        }
+        .gpt-item:hover .delete-btn {
+            display: none;
+        }
+        .admin-mode .gpt-item:hover .delete-btn,
+        .admin-mode .gpt-item:hover .edit-btn {
+            display: block;
+        }
+        #bgSection {
+            display: none;
+            margin-bottom: 20px;
+        }
+        #bgSection label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        #bgSection input[type="file"] {
+            display: block;
+            margin-bottom: 10px;
+        }
+        #bgSection button {
+            display: block;
+            margin-top: 10px;
+        }
+        .category-select {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .category-select label {
+            margin-right: 10px;
+        }
+        .category-select select {
+            margin-right: 10px;
+        }
+        .category-select button {
+            margin-left: 10px;
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            display: none;
+        }
+        .category-select button:hover {
+            background-color: darkred;
+        }
+        .category-select .admin-btn {
+            display: none;
+        }
+        .admin-mode .category-select button {
+            display: inline-block;
+        }
+        .admin-mode .category-select .admin-btn {
+            display: inline-block;
+        }
+        /* 추가된 스타일 */
+        .btn-click-effect {
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-click-effect::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0);
+            transition: transform 0.3s, opacity 0.3s;
+        }
+        .btn-click-effect:active::after {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+            transition: 0s;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen" id="body">
+    <div class="max-w-7xl w-full bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-2xl font-bold text-center mb-4">GPT Showcase</h1>
+        <div id="bgSection">
+            <label for="bgImageFile" class="block text-sm font-medium text-gray-700">Upload Background Image</label>
+            <input type="file" id="bgImageFile" class="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2">
+            <button id="bgSubmitBtn" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 btn-click-effect">
+                <span class="mdi mdi-upload mr-2"></span> Submit Background
+            </button>
+        </div>
+        <div id="inputSection" style="display: none;">
+            <div class="mb-4">
+                <label for="gptCategory" class="block text-sm font-medium text-gray-700">Category</label>
+                <div id="gptCategoryCheckboxes" class="mt-1 flex flex-wrap">
+                    <!-- Categories will be populated here dynamically with checkboxes -->
+                </div>
+            </div>
+            <div class="mb-4">
+                <label for="gptName" class="block text-sm font-medium text-gray-700">Enter GPT Name</label>
+                <input type="text" id="gptName" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2">
+            </div>
+            <div class="mb-4">
+                <label for="gptDescription" class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea id="gptDescription" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2" rows="3"></textarea>
+            </div>
+            <div class="mb-4">
+                <label for="gptLink" class="block text-sm font-medium text-gray-700">Link</label>
+                <input type="text" id="gptLink" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2">
+            </div>
+            <div class="mb-4">
+                <label for="gptImageFile" class="block text-sm font-medium text-gray-700">Upload GPT Image</label>
+                <input type="file" id="gptImageFile" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2">
+            </div>
+            <div class="flex justify-center">
+                <button id="submitBtn" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 btn-click-effect">
+                    <span class="mdi mdi-upload mr-2"></span> Submit
+                </button>
+            </div>
+        </div>
+        <div class="category-select">
+            <label for="categoryFilter" class="block text-sm font-medium text-gray-700">Filter by Category:</label>
+            <select id="categoryFilter" class="mt-1 block w-1/2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2">
+                <option value="all">ALL</option>
+            </select>
+            <button id="addCategoryBtn" class="admin-btn btn-click-effect">Add Category</button>
+            <button id="deleteCategoryBtn" class="admin-btn btn-click-effect">Delete Category</button>
+        </div>
+        <div class="mt-6">
+            <h2 class="text-xl font-bold text-center mb-4">GPT List</h2>
+            <ul id="gptList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <!-- GPT items will be added here dynamically -->
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer">
+        <button class="admin-btn btn-click-effect" id="adminBtn">Admin</button>
+        <p class="text-center">Report issues or request new bots: <a href="mailto:veldy.onyu@gmail.com" class="text-blue-300 hover:underline">veldy.onyu@gmail.com</a></p>
+    </div>
+
+    <script>
+        const adminPassword = 'onyu0507'; // 관리자 비밀번호를 설정하세요
+        let isAdmin = false;
+        let gptList = [];
+
+        document.getElementById('adminBtn').addEventListener('click', function() {
+            if (!isAdmin) {
+                Swal.fire({
+                    title: 'Enter Admin Password',
+                    input: 'password',
+                    inputLabel: 'Password',
+                    inputPlaceholder: 'Enter your password',
+                    inputAttributes: {
+                        maxlength: 20,
+                        autocapitalize: 'off',
+                        autocorrect: 'off'
+                    }
+                }).then((result) => {
+                    if (result.value === adminPassword) {
+                        isAdmin = true;
+                        document.body.classList.add('admin-mode');
+                        document.getElementById('inputSection').style.display = 'block';
+                        document.getElementById('bgSection').style.display = 'block';
+                        document.querySelectorAll('.admin-btn').forEach(btn => btn.style.display = 'inline-block');
+                        makeSortable();
+                        updateCategoryFilter();
+                        loadGPTList();
+                    } else {
+                        Swal.fire('Incorrect Password', '', 'error');
+                    }
+                });
+            } else {
+                isAdmin = false;
+                document.body.classList.remove('admin-mode');
+                document.getElementById('inputSection').style.display = 'none';
+                document.getElementById('bgSection').style.display = 'none';
+            }
+        });
+
+        function makeSortable() {
+            const gptList = document.getElementById('gptList');
+            Sortable.create(gptList, {
+                animation: 150,
+                onEnd: function(evt) {
+                    // Optional: handle sorting end
+                }
+            });
+        }
+
+        function updateCategoryFilter() {
+            const categories = [...new Set([...document.querySelectorAll('#gptList .gpt-item')].map(item => item.dataset.category))];
+            const categoryFilter = document.getElementById('categoryFilter');
+            categoryFilter.innerHTML = '<option value="all">ALL</option>'; // "ALL" 옵션 추가
+
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                categoryFilter.appendChild(option);
+
+                // Add to GPT Category select in Admin mode
+                const gptCategory = document.getElementById('gptCategory');
+                const gptOption = document.createElement('option');
+                gptOption.value = category;
+                gptOption.textContent = category;
+                gptCategory.appendChild(gptOption);
+            });
+        }
+
+        function addGPTItem(categories, name, description, link, file, imageUrl) {
+            categories.forEach(category => {
+                const listItem = document.createElement('li');
+                listItem.className = `gpt-item bg-white p-4 rounded-lg shadow-md relative`;
+                listItem.dataset.category = category;
+                listItem.innerHTML = `
+                    <a href="${link}" target="_blank">
+                        <img src="${imageUrl ? imageUrl : URL.createObjectURL(file)}" alt="${name}" class="w-full h-48 object-contain rounded-t-lg mb-2">
+                    </a>
+                    <h3 class="text-lg font-semibold text-center">${name}</h3>
+                    <p class="description-preview">${description}</p>
+                    <button class="edit-btn btn-click-effect">&#9998;</button>
+                    <button class="delete-btn btn-click-effect">&times;</button>
+                    <button class="view-description-btn mdi mdi-information-outline btn-click-effect"></button>
+                `;
+                document.getElementById('gptList').appendChild(listItem);
+            });
+            applyFilter(); // Apply the current filter to include the new item
+        }
+
+        function applyFilter() {
+            const filter = document.getElementById('categoryFilter').value;
+            const items = document.querySelectorAll('#gptList .gpt-item');
+            items.forEach(item => {
+                if (filter === 'all' || item.dataset.category === filter) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        document.getElementById('submitBtn').addEventListener('click', function() {
+            const categories = Array.from(document.querySelectorAll('#gptCategoryCheckboxes input[type="checkbox"]:checked')).map(cb => cb.value);
+            const name = document.getElementById('gptName').value;
+            const description = document.getElementById('gptDescription').value;
+            const link = document.getElementById('gptLink').value;
+            const file = document.getElementById('gptImageFile').files[0];
+
+            if (categories.length > 0 && name && description && link && file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    addGPTItem(categories, name, description, link, file, e.target.result);
+                    gptList.push({ categories, name, description, link, image: e.target.result });
+                    saveGPTList(); // Save the updated GPT list to local storage
+
+                    document.getElementById('gptName').value = '';
+                    document.getElementById('gptDescription').value = '';
+                    document.getElementById('gptLink').value = '';
+                    document.getElementById('gptImageFile').value = '';
+
+                    updateCategoryFilter(); // 카테고리 필터 업데이트
+                    document.getElementById('categoryFilter').value = 'all';
+                    applyFilter(); // Apply filter after adding new item
+                };
+                reader.readAsDataURL(file);
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Missing Information',
+                    text: 'Please fill in all the fields and select an image'
+                });
+            }
+        });
+
+        document.getElementById('bgSubmitBtn').addEventListener('click', function() {
+            const file = document.getElementById('bgImageFile').files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.body.style.backgroundImage = `url(${event.target.result})`;
+                    localStorage.setItem('backgroundImage', event.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('categoryFilter').addEventListener('change', applyFilter);
+
+        document.getElementById('gptList').addEventListener('click', function(event) {
+            if (event.target.classList.contains('delete-btn') && isAdmin) {
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: 'You won\'t be able to revert this!',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, delete it!',
+                    cancelButtonText: 'No, keep it'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const listItem = event.target.closest('.gpt-item');
+                        const name = listItem.querySelector('h3').textContent;
+                        gptList = gptList.filter(item => item.name !== name);
+                        listItem.remove();
+                        saveGPTList(); // Save the updated GPT list to local storage
+                        updateCategoryFilter(); // 카테고리 필터 업데이트
+                        Swal.fire(
+                            'Deleted!',
+                            'The item has been deleted.',
+                            'success'
+                        );
+                        applyFilter(); // Apply filter after deletion
+                    }
+                });
+            }
+
+            if (event.target.classList.contains('edit-btn') && isAdmin) {
+                const listItem = event.target.closest('.gpt-item');
+                const name = listItem.querySelector('h3').textContent;
+                const description = listItem.querySelector('.description-preview').textContent;
+                const link = listItem.querySelector('a').href;
+                const categories = gptList.find(item => item.name === name).categories;
+
+                document.getElementById('gptName').value = name;
+                document.getElementById('gptDescription').value = description;
+                document.getElementById('gptLink').value = link;
+                document.querySelectorAll(`#gptCategoryCheckboxes input[type="checkbox"]`).forEach(checkbox => {
+                    checkbox.checked = categories.includes(checkbox.value);
+                });
+
+                listItem.remove();
+                gptList = gptList.filter(item => item.name !== name);
+                saveGPTList(); // Save the updated GPT list to local storage
+                updateCategoryFilter();
+            }
+
+            if (event.target.classList.contains('view-description-btn')) {
+                const listItem = event.target.closest('.gpt-item');
+                const name = listItem.querySelector('h3').textContent;
+                const description = listItem.querySelector('.description-preview').textContent;
+
+                Swal.fire({
+                    title: name,
+                    text: description,
+                    confirmButtonText: 'Close'
+                });
+            }
+        });
+
+        document.getElementById('addCategoryBtn').addEventListener('click', function() {
+            if (isAdmin) {
+                Swal.fire({
+                    title: 'Enter New Category',
+                    input: 'text',
+                    inputPlaceholder: 'Enter new category name',
+                    showCancelButton: true,
+                    confirmButtonText: 'Add',
+                    cancelButtonText: 'Cancel',
+                    inputValidator: (value) => {
+                        if (!value) {
+                            return 'Category name cannot be empty!';
+                        } else {
+                            const categoryFilter = document.getElementById('categoryFilter');
+                            if (![...categoryFilter.options].some(option => option.value === value)) {
+                                const option = document.createElement('option');
+                                option.value = value;
+                                option.textContent = value;
+                                categoryFilter.appendChild(option);
+
+                                addCategoryCheckbox(value);
+                            }
+                            categoryFilter.value = value; // 새 카테고리 선택
+                            applyFilter(); // Apply filter after adding new category
+                        }
+                    }
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Access Denied',
+                    text: 'You must be an admin to add categories.'
+                });
+            }
+        });
+
+        document.getElementById('deleteCategoryBtn').addEventListener('click', function() {
+            if (isAdmin) {
+                const categoryFilter = document.getElementById('categoryFilter');
+                const selectedCategory = categoryFilter.value;
+                if (selectedCategory !== 'all') {
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: `This will delete all items in the ${selectedCategory} category.`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, delete it!',
+                        cancelButtonText: 'No, keep it'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            document.querySelectorAll(`#gptList .gpt-item[data-category="${selectedCategory}"]`).forEach(item => item.remove());
+                            categoryFilter.querySelector(`option[value="${selectedCategory}"]`).remove();
+
+                            removeCategoryCheckbox(selectedCategory);
+                            updateCategoryFilter(); // 카테고리 필터 업데이트
+                            applyFilter(); // Apply filter after deleting category
+                        }
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Invalid Action',
+                        text: 'You cannot delete the "ALL" category.'
+                    });
+                }
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Access Denied',
+                    text: 'You must be an admin to delete categories.'
+                });
+            }
+        });
+
+        function saveGPTList() {
+            localStorage.setItem('gptList', JSON.stringify(gptList));
+        }
+
+        function loadGPTList() {
+            const storedGPTList = localStorage.getItem('gptList');
+            if (storedGPTList) {
+                gptList = JSON.parse(storedGPTList);
+                gptList.forEach(item => {
+                    if (item.categories && Array.isArray(item.categories)) {
+                        item.categories.forEach(category => addGPTItem([category], item.name, item.description, item.link, null, item.image));
+                    }
+                });
+            }
+        }
+
+        function loadBackgroundImage() {
+            const bgImage = localStorage.getItem('backgroundImage');
+            if (bgImage) {
+                document.body.style.backgroundImage = `url(${bgImage})`;
+            }
+        }
+
+        function addCategoryCheckbox(category) {
+            const checkboxContainer = document.getElementById('gptCategoryCheckboxes');
+            const label = document.createElement('label');
+            label.classList.add('mr-4');
+            label.innerHTML = `
+                <input type="checkbox" value="${category}" class="mr-2">
+                ${category}
+            `;
+            checkboxContainer.appendChild(label);
+        }
+
+        function removeCategoryCheckbox(category) {
+            const checkboxContainer = document.getElementById('gptCategoryCheckboxes');
+            const checkboxes = checkboxContainer.querySelectorAll(`input[type="checkbox"][value="${category}"]`);
+            checkboxes.forEach(cb => {
+                cb.parentElement.remove();
+            });
+        }
+
+        window.addEventListener('load', function() {
+            loadGPTList();
+            loadBackgroundImage();
+            updateCategoryFilter();
+            document.getElementById('categoryFilter').value = 'all';
+            applyFilter(); // Apply filter on page load
+        });
+
+        // 초기 카테고리 추가
+        const initialCategories = ['AffinityUniverse', 'Veldy', 'Education', 'Marketing', 'Etc'];
+        initialCategories.forEach(category => {
+            addCategoryCheckbox(category);
+            const option = document.createElement('option');
+            option.value = category.toLowerCase();
+            option.textContent = category;
+            document.getElementById('categoryFilter').appendChild(option);
+        });
+    </script>
+</body>
+</html>
